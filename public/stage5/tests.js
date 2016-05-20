@@ -13,6 +13,10 @@ describe('ステージ5（意図通りに非同期処理を利用できる）', 
       //   expect(msg).to.equal('resolved!');
       //   testDone();
       // });
+      promise.then(function(msg) {
+        expect(msg).to.equal('resolved!');
+        testDone();
+      });
     });
 
 
@@ -26,7 +30,10 @@ describe('ステージ5（意図通りに非同期処理を利用できる）', 
       // testDone();
 
       // ここにコードを記述してください。
-
+      promise.catch(function(msg) {
+        expect(msg).to.equal('rejected!');
+        testDone();
+      });
 
     });
 
@@ -38,8 +45,7 @@ describe('ステージ5（意図通りに非同期処理を利用できる）', 
       var promise3 = createWaitPromise(messageFragments[2], 30);
 
       // 作成した promise を promise 変数に代入してください。
-      var promise = 'change me!';
-
+      var promise = Promise.all([promise1, promise2, promise3]);
 
       return expect(promise).to.eventually.deep.equal(messageFragments);
     });
@@ -52,7 +58,7 @@ describe('ステージ5（意図通りに非同期処理を利用できる）', 
       var promise3 = createWaitPromise(messageFragments[2], 30);
 
       // 作成した promise を promise 変数に代入してください。
-      var promise = 'change me!';
+      var promise = Promise.race([promise1, promise2, promise3]);
 
 
       return expect(promise).to.eventually.equal(messageFragments[1]);
@@ -72,7 +78,9 @@ describe('ステージ5（意図通りに非同期処理を利用できる）', 
       // var promisedFriends = fetch(api + username).then(function(res) {
       //   return res.json();
       // });
-
+      var promisedFriends = fetch(api + username).then(function(res) {
+        return res.json();
+      });
 
       return expect(promisedFriends).to.eventually.have.length(1)
         .and.have.members(['PYXC-PJ']);
@@ -84,7 +92,9 @@ describe('ステージ5（意図通りに非同期処理を利用できる）', 
       var username = 'Shen';
 
       // 作成した promise を promisedFriends 変数に代入してください。
-      var promisedFriends = 'change me!';
+      var promisedFriends = fetch(api + username).then(function(res) {
+        return res.json();
+      });
 
 
       return expect(promisedFriends).to.eventually.have.length(2)
@@ -97,7 +107,20 @@ describe('ステージ5（意図通りに非同期処理を利用できる）', 
       var username = 'Shen';
 
       // 作成した promise を promisedFriends 変数に代入してください。
-      var promisedFriends = 'change me!';
+
+      var promisedFriends = fetch(api + username).then(function(res) {
+        return res.json();
+      }).then(function(json) {
+        var promises = [];
+        json.forEach(function(val, index, array){
+          promises.push(fetch(api + val).then(function(res) {
+            return res.json();
+          }));
+        });
+        return Promise.all(promises).then(function(array) {
+          return Array.prototype.concat.apply([], array);
+        });
+      });
 
 
       return expect(promisedFriends).to.eventually.have.length(1)
@@ -127,7 +150,11 @@ describe('ステージ5（意図通りに非同期処理を利用できる）', 
     it('Github の mixi-inc の organization の情報を取得できる', function() {
 
       // 作成した promise を mixiOrg 変数に代入してください。
-      var mixiOrg = 'change me!';
+      var url = 'https://api.github.com/';
+      var path = 'orgs/mixi-inc';
+      var mixiOrg = fetch(url + path).then(function(res) {
+        return res.json();
+      });;
 
       return expect(mixiOrg).to.eventually.have.property('id', 1089312);
 
@@ -140,7 +167,10 @@ describe('ステージ5（意図通りに非同期処理を利用できる）', 
       var repository = 'mixi-inc/JavaScriptTraining';
 
       // 作成した promise を mixiRepo 変数に代入してください。
-      var mixiRepo = 'change me!';
+      var url = 'https://api.github.com/repos/';
+      var mixiRepo = fetch(url + repository).then(function(res) {
+        return res.json();
+      });;;
 
 
       return expect(mixiRepo).to.eventually.have.property('full_name', repository);
@@ -153,7 +183,29 @@ describe('ステージ5（意図通りに非同期処理を利用できる）', 
     it('Github API を使って、VimL、Emacs Lisp でスターが最も多いプロダクト名を' +
        'それぞれ 1 つずつ取得できる', function() {
       var languages = [ 'VimL', '"Emacs Lisp"' ];
-      var mostPopularRepos = 'change me!';
+
+      var searchChampByLanguage = function(lang){
+        var url = 'https://api.github.com/search/repositories?';
+        var params = 'q=+language:' + lang + '&sort=stars&order=desc';
+        var promise = fetch(url + params).then(function(res) {
+          return res.json()
+        }).then(function(json){
+          var items = json['items'];
+          var repo = items[0];
+          return repo['name'];
+
+        });
+        return promise;
+      };
+
+      var promises = [];
+      languages.forEach(function(lang, index, array) {
+        promises.push(searchChampByLanguage(lang));
+      });
+
+      var mostPopularRepos = Promise.all(promises).then(function(repos){
+        return repos;
+      })
 
       // 作成した promise を mostPopularRepos 変数に代入してください。
 
